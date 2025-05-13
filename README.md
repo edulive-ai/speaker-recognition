@@ -7,9 +7,11 @@ Dự án này xây dựng một hệ thống nhận dạng người nói hoàn c
 - Trích xuất đặc trưng (embedding) từ file âm thanh
 - Xây dựng và quản lý cơ sở dữ liệu người nói với Faiss
 - Nhận dạng người nói từ file âm thanh mới
-- Thêm người nói mới vào cơ sở dữ liệu
+- Thêm người nói mới vào cơ sở dữ liệu (từ nhiều file hoặc từ thư mục)
+- Xóa người nói khỏi cơ sở dữ liệu
 - Chuyển đổi nhiều định dạng âm thanh sang định dạng wav
 - So sánh trực tiếp độ tương đồng giữa hai file âm thanh
+- Ghi âm trực tiếp từ microphone và lưu thành file WAV
 
 ## Cài đặt
 
@@ -57,7 +59,7 @@ python convert_audio_to_wav.py --dir đường/dẫn/đến/thư/mục
 python convert_audio_to_wav.py --output thư/mục/đầu/ra
 
 # Chỉ định tần số lấy mẫu
-python convert_audio_to_wav.py --rate 44100
+python convert_audio_to_wav.py --rate 16000
 
 # Chỉ định các định dạng cần chuyển đổi
 python convert_audio_to_wav.py --formats mp3 m4a ogg
@@ -89,8 +91,22 @@ python speaker_recognition_app.py identify đường/dẫn/đến/file.wav --thr
 
 ### Thêm người nói mới
 
+Bạn có thể thêm người nói bằng một trong hai cách:
+
+1. Từ nhiều file âm thanh riêng lẻ:
 ```bash
-python speaker_recognition_app.py add "Tên người nói" đường/dẫn/đến/file1.wav đường/dẫn/đến/file2.wav
+python speaker_recognition_app.py add "Tên người nói" đường/dẫn/file1.wav đường/dẫn/file2.wav
+```
+
+2. Từ một thư mục chứa nhiều file WAV:
+```bash
+python speaker_recognition_app.py add_folder "Tên người nói" đường/dẫn/đến/thư/mục
+```
+
+### Xóa người nói
+
+```bash
+python speaker_recognition_app.py remove "Tên người nói"
 ```
 
 ### Liệt kê danh sách người nói
@@ -105,12 +121,26 @@ python speaker_recognition_app.py list
 python speaker_recognition_app.py check file1.wav file2.wav
 ```
 
+### Ghi âm từ microphone
+
+Dự án cũng bao gồm công cụ ghi âm từ microphone:
+
+```bash
+# Ghi nhiều mẫu cho một người nói
+python record_speaker.py "Tên người nói" --samples 3 --duration 5
+```
+
+Các file ghi âm sẽ được lưu ở định dạng WAV và có thể được sử dụng trực tiếp với ứng dụng nhận dạng người nói.
+
 ## Cấu trúc dự án
 
 - `speaker_embedder.py`: Module trích xuất đặc trưng từ file âm thanh
 - `speaker_database.py`: Module quản lý cơ sở dữ liệu người nói với Faiss
 - `speaker_recognition_app.py`: Ứng dụng chính để nhận dạng người nói
 - `convert_audio_to_wav.py`: Công cụ chuyển đổi nhiều định dạng âm thanh sang wav
+- `record_audio.py`: Công cụ ghi âm từ microphone
+- `record_speaker.py`: Công cụ ghi nhiều mẫu âm thanh cho một người nói
+- `play_audio.py`: Công cụ phát lại file âm thanh
 - `audio/`: Thư mục chứa file âm thanh đầu vào
 - `speaker_db/`: Thư mục chứa cơ sở dữ liệu người nói
 - `pretrained_models/`: Thư mục chứa mô hình ECAPA-TDNN đã tải

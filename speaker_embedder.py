@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 import torch
 import torchaudio
-from speechbrain.pretrained import EncoderClassifier
+from speechbrain.inference import EncoderClassifier
 
 class SpeakerEmbedder:
     """

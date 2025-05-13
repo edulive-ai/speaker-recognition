@@ -4,6 +4,7 @@
 import os
 import argparse
 import numpy as np
+import glob
 from pathlib import Path
 from speaker_embedder import SpeakerEmbedder, save_embeddings, load_embeddings
 from speaker_database import SpeakerDatabase
@@ -175,6 +176,81 @@ class SpeakerRecognitionApp:
             
         return self.database.names
         
+    def add_speaker_from_folder(self, folder_path, speaker_name):
+        """
+        Thêm người nói mới vào cơ sở dữ liệu từ thư mục chứa các file âm thanh
+        
+        Args:
+            folder_path: Đường dẫn đến thư mục chứa các file WAV
+            speaker_name: Tên người nói
+            
+        Returns:
+            Thành công hay không
+        """
+        # Đảm bảo embedder và database đã được khởi tạo
+        if self.embedder is None or self.database is None:
+            self.initialize()
+            
+        # Kiểm tra thư mục tồn tại
+        if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+            print(f"Thư mục {folder_path} không tồn tại hoặc không phải là thư mục")
+            return False
+            
+        # Tìm tất cả các file WAV trong thư mục
+        wav_files = glob.glob(os.path.join(folder_path, "*.wav"))
+        
+        if not wav_files:
+            print(f"Không tìm thấy file WAV nào trong thư mục {folder_path}")
+            return False
+            
+        print(f"Đang thêm người nói {speaker_name} với {len(wav_files)} file âm thanh từ thư mục {folder_path}...")
+        
+        # Thêm người nói sử dụng hàm add_speaker đã có
+        return self.add_speaker(wav_files, speaker_name)
+        
+    def remove_speaker(self, speaker_name):
+        """
+        Xóa người nói khỏi cơ sở dữ liệu
+        
+        Args:
+            speaker_name: Tên người nói cần xóa
+            
+        Returns:
+            Thành công hay không
+        """
+        # Đảm bảo database đã được khởi tạo
+        if self.database is None:
+            self.initialize()
+            
+        # Kiểm tra database có dữ liệu không
+        if not self.database or not self.database.names:
+            print("Cơ sở dữ liệu trống")
+            return False
+            
+        # Kiểm tra người nói có tồn tại không
+        if speaker_name not in self.database.names:
+            print(f"Không tìm thấy người nói '{speaker_name}' trong cơ sở dữ liệu")
+            return False
+            
+        # Xóa người nói khỏi database
+        print(f"Đang xóa người nói '{speaker_name}' khỏi cơ sở dữ liệu...")
+        
+        # Xóa embeddings của người nói này
+        del self.database.embeddings[speaker_name]
+        
+        # Cập nhật danh sách tên
+        self.database.names = [name for name in self.database.names if name != speaker_name]
+        
+        # Xây dựng lại mapping và index từ đầu
+        self.database.embedding_to_name = []
+        self.database.build_index()
+        
+        # Lưu cơ sở dữ liệu
+        self.database.save(self.database_dir)
+        
+        print(f"Đã xóa người nói '{speaker_name}' khỏi cơ sở dữ liệu")
+        return True
+        
 def main():
     """Hàm main xử lý lệnh từ command line"""
     parser = argparse.ArgumentParser(description="Ứng dụng nhận dạng người nói")
@@ -197,8 +273,17 @@ def main():
     add_parser.add_argument("name", help="Tên người nói")
     add_parser.add_argument("files", nargs="+", help="Đường dẫn đến các file âm thanh")
     
+    # Subcommand "add_folder"
+    add_folder_parser = subparsers.add_parser("add_folder", help="Thêm người nói mới từ thư mục chứa các file WAV")
+    add_folder_parser.add_argument("name", help="Tên người nói")
+    add_folder_parser.add_argument("folder", help="Đường dẫn đến thư mục chứa các file WAV")
+    
     # Subcommand "list"
     subparsers.add_parser("list", help="Liệt kê danh sách người nói")
+    
+    # Subcommand "remove"
+    remove_parser = subparsers.add_parser("remove", help="Xóa người nói khỏi cơ sở dữ liệu")
+    remove_parser.add_argument("name", help="Tên người nói cần xóa")
     
     # Subcommand "check"
     check_parser = subparsers.add_parser("check", help="Kiểm tra độ tương đồng giữa hai file âm thanh")
@@ -230,12 +315,18 @@ def main():
     elif args.command == "add":
         app.add_speaker(args.files, args.name)
         
+    elif args.command == "add_folder":
+        app.add_speaker_from_folder(args.folder, args.name)
+        
     elif args.command == "list":
         speakers = app.list_speakers()
         print("Danh sách người nói:")
         for i, speaker in enumerate(speakers, 1):
             print(f"{i}. {speaker}")
             
+    elif args.command == "remove":
+        app.remove_speaker(args.name)
+        
     elif args.command == "check":
         app.initialize()
         
