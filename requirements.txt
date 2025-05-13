@@ -1,0 +1,12 @@
+speechbrain==1.0.0
+torchaudio
+torch
+numpy
+scipy
+librosa
+soundfile
+faiss-cpu
+tqdm
+matplotlib
+pandas
+pydub
