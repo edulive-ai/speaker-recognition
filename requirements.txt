@@ -11,3 +11,7 @@ matplotlib
 pandas
 pydub
 pyaudio
+flask
+flask-cors
+werkzeug
+SpeechRecognition

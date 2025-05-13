@@ -8,8 +8,8 @@
     "Mimi",
     "Domi",
     "Gigi",
-    "Spoongy",
-    "Tien"
+    "Tien",
+    "Spoogy"
   ],
   "dimension": 192,
   "embedding_to_name": [
@@ -22,10 +22,10 @@
     "Mimi",
     "Domi",
     "Gigi",
-    "Spoongy",
     "Tien",
     "Tien",
     "Tien",
-    "Tien"
+    "Tien",
+    "Spoogy"
   ]
 }

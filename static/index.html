@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống nhận dạng người nói</title>
+    <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="images/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="images/favicon.png">
+    <style>
+        /* Fallback inline favicon */
+        @media (prefers-reduced-data: reduce) {
+            link[rel="icon"] {
+                content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMzNDk4ZGIiLz48cmVjdCB4PSIyNiIgeT0iMTQiIHdpZHRoPSIxMiIgaGVpZ2h0PSIyMiIgcng9IjYiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTIwIDMyYTEyIDEyIDAgMCAwIDI0IDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iNCIvPjxsaW5lIHgxPSIzMiIgeTE9IjQyIiB4Mj0iMzIiIHkyPSI1MCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI0Ii8+PC9zdmc+");
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Hệ thống nhận dạng người nói</h1>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="#" class="active" data-page="identify">Nhận dạng</a></li>
+                <li><a href="#" data-page="manage">Quản lý người nói</a></li>
+                <li><a href="#" data-page="compare">So sánh mẫu giọng</a></li>
+                <li><a href="#" data-page="speech-to-text">Chuyển văn bản</a></li>
+                <li><a href="#" data-page="about">Thông tin</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <!-- Trang nhận dạng người nói -->
+            <section id="identify" class="page active">
+                <h2>Nhận dạng người nói</h2>
+                <div class="card">
+                    
+                    <div class="upload-area" id="identify-upload-area">
+                        <i class="fas fa-microphone"></i>
+                        <p>Kéo thả file âm thanh vào đây hoặc nhấn để chọn file</p>
+                        <input type="file" id="identify-file" accept=".wav,.mp3,.ogg,.flac,.m4a" hidden>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="threshold">Ngưỡng nhận dạng:</label>
+                        <input type="range" id="threshold" min="0.1" max="0.9" step="0.05" value="0.6">
+                        <span id="threshold-value">0.6</span>
+                    </div>
+                    
+                    <button id="identify-btn" class="btn primary" disabled>Nhận dạng</button>
+                    
+                    <div id="identify-result" class="result-area hidden">
+                        <h3>Kết quả nhận dạng</h3>
+                        <div id="result-content"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trang quản lý người nói -->
+            <section id="manage" class="page">
+                <h2>Quản lý người nói</h2>
+                <div class="card">
+                    <h3>Danh sách người nói</h3>
+                    <div id="speaker-list" class="speaker-list">
+                        <p>Đang tải danh sách người nói...</p>
+                    </div>
+                    
+                    <h3>Thêm người nói mới</h3>
+                    <div class="form-group">
+                        <label for="speaker-name">Tên người nói:</label>
+                        <input type="text" id="speaker-name" placeholder="Nhập tên người nói">
+                    </div>
+                    
+                    <div class="upload-area" id="add-upload-area">
+                        <i class="fas fa-file-audio"></i>
+                        <p>Kéo thả các file âm thanh vào đây hoặc nhấn để chọn file</p>
+                        <p class="small">(Bạn có thể chọn nhiều file)</p>
+                        <input type="file" id="add-files" accept=".wav,.mp3,.ogg,.flac,.m4a" multiple hidden>
+                    </div>
+                    
+                    <div id="file-list" class="file-list hidden">
+                        <h4>Các file đã chọn</h4>
+                        <ul id="selected-files"></ul>
+                    </div>
+                    
+                    <button id="add-speaker-btn" class="btn primary" disabled>Thêm người nói</button>
+                    
+                    <div id="add-result" class="result-area hidden">
+                        <h3>Kết quả</h3>
+                        <div id="add-result-content"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trang so sánh mẫu giọng -->
+            <section id="compare" class="page">
+                <h2>So sánh mẫu giọng nói</h2>
+                <div class="card">
+                    
+                    <div class="compare-container">
+                        <div class="compare-item">
+                            <h3>File 1</h3>
+                            <div class="upload-area" id="compare-upload-area-1">
+                                <i class="fas fa-file-audio"></i>
+                                <p>Chọn file âm thanh thứ nhất</p>
+                                <input type="file" id="compare-file-1" accept=".wav,.mp3,.ogg,.flac,.m4a" hidden>
+                            </div>
+                            <div id="file1-name" class="file-name"></div>
+                        </div>
+                        
+                        <div class="compare-item">
+                            <h3>File 2</h3>
+                            <div class="upload-area" id="compare-upload-area-2">
+                                <i class="fas fa-file-audio"></i>
+                                <p>Chọn file âm thanh thứ hai</p>
+                                <input type="file" id="compare-file-2" accept=".wav,.mp3,.ogg,.flac,.m4a" hidden>
+                            </div>
+                            <div id="file2-name" class="file-name"></div>
+                        </div>
+                    </div>
+                    
+                    <button id="compare-btn" class="btn primary" disabled>So sánh</button>
+                    
+                    <div id="compare-result" class="result-area hidden">
+                        <h3>Kết quả so sánh</h3>
+                        <div id="compare-result-content"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trang chuyển đổi âm thanh thành văn bản -->
+            <section id="speech-to-text" class="page">
+                <h2>Chuyển đổi âm thanh thành văn bản</h2>
+                <div class="card">
+                    <h3>Tải lên file âm thanh</h3>                    
+                    <div class="upload-area" id="stt-upload-area">
+                        <i class="fas fa-file-audio"></i>
+                        <p>Kéo thả file âm thanh vào đây hoặc nhấn để chọn file</p>
+                        <input type="file" id="stt-file" accept=".wav,.mp3,.ogg,.flac,.m4a" hidden>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="language">Ngôn ngữ:</label>
+                        <select id="language">
+                            <option value="vi-VN" selected>Tiếng Việt</option>
+                            <option value="en-US">Tiếng Anh</option>
+                        </select>
+                    </div>
+                    
+                    <button id="stt-from-file-btn" class="btn primary" disabled>Chuyển đổi</button>
+                    
+                    <div id="stt-file-result" class="result-area hidden">
+                        <h3>Văn bản được nhận dạng</h3>
+                        <div id="stt-file-content"></div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>Ghi âm và chuyển đổi</h3>                    
+                    <div class="form-group">
+                        <label for="record-duration">Thời gian ghi âm (giây):</label>
+                        <input type="number" id="record-duration" min="1" max="60" value="5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="record-language">Ngôn ngữ:</label>
+                        <select id="record-language">
+                            <option value="vi-VN" selected>Tiếng Việt</option>
+                            <option value="en-US">Tiếng Anh</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="checkbox" id="extract-embedding">
+                        <label for="extract-embedding">Trích xuất đặc trưng giọng nói</label>
+                    </div>
+                    
+                    <div id="speaker-options" class="form-group hidden">
+                        <div class="form-group">
+                            <input type="checkbox" id="identify-speaker-option">
+                            <label for="identify-speaker-option">Nhận dạng người nói</label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="checkbox" id="save-embedding-option">
+                            <label for="save-embedding-option">Lưu đặc trưng vào cơ sở dữ liệu</label>
+                        </div>
+                        
+                        <div id="save-speaker-name-group" class="form-group hidden">
+                            <label for="save-speaker-name">Tên người nói:</label>
+                            <input type="text" id="save-speaker-name" placeholder="Nhập tên người nói">
+                        </div>
+                    </div>
+                    
+                    <button id="record-btn" class="btn primary">Bắt đầu ghi âm</button>
+                    
+                    <div id="stt-record-result" class="result-area hidden">
+                        <h3>Kết quả</h3>
+                        <div id="stt-record-content"></div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trang thông tin -->
+            <section id="about" class="page">
+                <h2>Thông tin hệ thống</h2>
+                <div class="card">
+                    <h3>Giới thiệu</h3>
+                    <p>Hệ thống nhận dạng người nói được xây dựng dựa trên mô hình ECAPA-TDNN từ SpeechBrain, 
+                    kết hợp với thư viện Faiss của Facebook để lưu trữ và tìm kiếm hiệu quả. Hệ thống tích hợp thêm
+                    khả năng chuyển đổi âm thanh thành văn bản sử dụng Google Speech Recognition API.</p>
+                    
+                    <h3>Các tính năng</h3>
+                    <ul>
+                        <li>Nhận dạng người nói từ file âm thanh</li>
+                        <li>Thêm người nói mới vào hệ thống</li>
+                        <li>Quản lý danh sách người nói</li>
+                        <li>So sánh độ tương đồng giữa các mẫu giọng nói</li>
+                        <li>Chuyển đổi âm thanh thành văn bản</li>
+                        <li>Ghi âm trực tiếp từ microphone</li>
+                        <li>Trích xuất đặc trưng giọng nói từ bản ghi âm</li>
+                        <li>Kết hợp nhận dạng người nói và chuyển đổi văn bản</li>
+                    </ul>
+                    
+                    <h3>Công nghệ sử dụng</h3>
+                    <ul>
+                        <li>SpeechBrain: Mô hình ECAPA-TDNN để trích xuất đặc trưng giọng nói</li>
+                        <li>Faiss: Lưu trữ và tìm kiếm vector đặc trưng hiệu quả</li>
+                        <li>Google Speech Recognition: Chuyển đổi âm thanh thành văn bản</li>
+                        <li>PyAudio: Ghi âm từ microphone</li>
+                        <li>Flask: Xây dựng API backend</li>
+                        <li>HTML/CSS/JavaScript: Giao diện người dùng</li>
+                    </ul>
+                    
+                    <h3>Các định dạng hỗ trợ</h3>
+                    <p>Hệ thống hỗ trợ các định dạng âm thanh: WAV, MP3, OGG, FLAC, M4A</p>
+                    
+                    <h3>Lưu ý</h3>
+                    <p>Để có kết quả nhận dạng tốt nhất:</p>
+                    <ul>
+                        <li>Sử dụng các file âm thanh có chất lượng cao, ít nhiễu</li>
+                        <li>Mẫu âm thanh nên có độ dài ít nhất 3-5 giây</li>
+                        <li>Khi ghi âm, nên ở môi trường yên tĩnh và nói rõ ràng</li>
+                        <li>Đối với nhận dạng văn bản, cần có kết nối internet để sử dụng Google API</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+        
+        <footer>
+            <p>&copy; 2024 Hệ thống nhận dạng người nói | <b>NBT03</b></p>
+        </footer>
+    </div>
+    
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <p id="loading-message">Đang xử lý...</p>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html> 
