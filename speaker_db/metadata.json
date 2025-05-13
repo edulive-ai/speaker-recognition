@@ -1,15 +1,26 @@
 {
   "names": [
-    "Spoongy",
-    "Seren2",
-    "Silly-Start1",
-    "Alice2",
-    "Silly",
-    "Mimi",
-    "Gigi",
-    "Domi",
+    "Alice",
+    "Ethan",
+    "Seren",
     "Luke",
-    "ethan"
+    "Silly_Start",
+    "Mimi",
+    "Domi",
+    "Gigi",
+    "Spoongy"
   ],
-  "dimension": 192
+  "dimension": 192,
+  "embedding_to_name": [
+    "Alice",
+    "Ethan",
+    "Seren",
+    "Luke",
+    "Silly_Start",
+    "Silly_Start",
+    "Mimi",
+    "Domi",
+    "Gigi",
+    "Spoongy"
+  ]
 }

@@ -2,145 +2,173 @@
 # -*- coding: utf-8 -*-
 
 import os
-import torch
-import torchaudio
 import numpy as np
 from pathlib import Path
+import torch
+import torchaudio
 from speechbrain.pretrained import EncoderClassifier
-from tqdm import tqdm
 
 class SpeakerEmbedder:
     """
-    Lớp trích xuất đặc trưng từ file âm thanh giọng nói
-    sử dụng mô hình ECAPA-TDNN từ SpeechBrain
+    Lớp xử lý việc tạo embeddings từ các file âm thanh
+    sử dụng SpeechBrain để trích xuất đặc trưng giọng nói
     """
     
-    def __init__(self, device=None):
+    def __init__(self, model_name="speechbrain/spkrec-ecapa-voxceleb"):
         """
-        Khởi tạo embedder
+        Khởi tạo embedder với model SpeechBrain
         
         Args:
-            device: Thiết bị sử dụng cho mô hình (None để tự động chọn)
+            model_name: Tên model SpeechBrain để sử dụng
         """
-        if device is None:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        else:
-            self.device = device
-            
-        print(f"Đang tải mô hình speaker embedding trên thiết bị: {self.device}")
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = EncoderClassifier.from_hparams(
-            source="speechbrain/spkrec-ecapa-voxceleb",
+            source=model_name,
             savedir="pretrained_models/spkrec-ecapa-voxceleb",
             run_opts={"device": self.device}
         )
-        print("Đã tải xong mô hình")
         
-    def embed_file(self, audio_file):
+    def process_audio(self, audio_path):
         """
-        Trích xuất đặc trưng từ một file âm thanh
+        Xử lý file âm thanh và trích xuất embedding
         
         Args:
-            audio_file: Đường dẫn đến file âm thanh
+            audio_path: Đường dẫn đến file âm thanh
             
         Returns:
-            Embedding vector (numpy array)
+            Vector embedding của giọng nói
         """
-        try:
-            # Đọc file âm thanh
-            signal, fs = torchaudio.load(audio_file)
+        # Load và xử lý âm thanh
+        signal, fs = torchaudio.load(audio_path)
+        
+        # Đảm bảo âm thanh là mono
+        if signal.shape[0] > 1:
+            signal = torch.mean(signal, dim=0, keepdim=True)
             
-            # Trích xuất embedding từ tín hiệu âm thanh
-            with torch.no_grad():
-                embedding = self.model.encode_batch(signal)
-                
-            # Chuyển về numpy array và squeeze để loại bỏ chiều dư thừa
-            return embedding.squeeze().cpu().numpy()
-            
-        except Exception as e:
-            print(f"Lỗi khi trích xuất embedding từ {audio_file}: {e}")
-            return None
-            
-    def embed_files(self, audio_files, show_progress=True):
+        # Tạo embedding
+        embedding = self.model.encode_batch(signal)
+        return embedding.squeeze().cpu().numpy()
+        
+    def process_speaker_directory(self, speaker_dir):
         """
-        Trích xuất đặc trưng từ nhiều file âm thanh
+        Xử lý tất cả các file âm thanh trong thư mục của một người nói
         
         Args:
-            audio_files: Danh sách đường dẫn đến các file âm thanh
-            show_progress: Hiển thị thanh tiến trình
+            speaker_dir: Đường dẫn đến thư mục chứa các mẫu giọng nói
             
         Returns:
-            Dictionary map từ tên file đến embedding vector
+            List các embeddings của người nói
         """
-        embeddings = {}
+        embeddings = []
+        audio_files = list(Path(speaker_dir).glob("*.wav"))
         
-        # Tạo iterator với hoặc không có thanh tiến trình
-        files_iter = tqdm(audio_files) if show_progress else audio_files
+        if not audio_files:
+            print(f"Không tìm thấy file âm thanh trong {speaker_dir}")
+            return embeddings
+            
+        print(f"Đang xử lý {len(audio_files)} file âm thanh cho {Path(speaker_dir).name}")
         
-        for audio_file in files_iter:
+        for audio_file in audio_files:
             try:
-                # Lấy tên file không có phần mở rộng
-                file_name = os.path.splitext(os.path.basename(audio_file))[0]
-                
-                # Trích xuất embedding
-                embedding = self.embed_file(audio_file)
-                
-                if embedding is not None:
-                    embeddings[file_name] = embedding
-                    
+                embedding = self.process_audio(str(audio_file))
+                embeddings.append(embedding)
+                print(f"Đã xử lý {audio_file.name}")
             except Exception as e:
-                print(f"Lỗi với file {audio_file}: {e}")
-                continue
+                print(f"Lỗi khi xử lý {audio_file.name}: {e}")
                 
         return embeddings
         
-    def embed_directory(self, audio_dir, extensions=(".wav", ".mp3"), show_progress=True):
+    def process_all_speakers(self, speakers_dir):
         """
-        Trích xuất đặc trưng từ tất cả file âm thanh trong một thư mục
+        Xử lý tất cả các thư mục người nói
         
         Args:
-            audio_dir: Thư mục chứa file âm thanh
-            extensions: Các phần mở rộng hợp lệ cho file âm thanh
-            show_progress: Hiển thị thanh tiến trình
+            speakers_dir: Đường dẫn đến thư mục chứa các thư mục người nói
             
         Returns:
-            Dictionary map từ tên file đến embedding vector
+            Dictionary ánh xạ từ tên người nói đến list embeddings
         """
-        audio_files = []
+        # Tạo thư mục nếu chưa tồn tại
+        speakers_path = Path(speakers_dir)
+        speakers_path.mkdir(parents=True, exist_ok=True)
         
-        # Thu thập tất cả file âm thanh trong thư mục
-        for ext in extensions:
-            audio_files.extend(list(Path(audio_dir).glob(f"*{ext}")))
-            
-        if not audio_files:
-            print(f"Không tìm thấy file âm thanh nào trong thư mục {audio_dir}")
-            return {}
-            
-        return self.embed_files(audio_files, show_progress=show_progress)
+        speakers_embeddings = {}
+        speaker_dirs = [d for d in speakers_path.iterdir() if d.is_dir()]
         
-# Hàm trợ giúp để lưu và tải embeddings
-def save_embeddings(embeddings, output_file):
-    """Lưu embeddings dưới dạng file numpy"""
-    np.savez(output_file, **embeddings)
-    print(f"Đã lưu {len(embeddings)} embeddings vào {output_file}")
+        if not speaker_dirs:
+            print(f"Không tìm thấy thư mục người nói trong {speakers_dir}")
+            print("Hãy tạo các thư mục con cho mỗi người nói và đặt các file .wav vào đó")
+            print("Ví dụ:")
+            print("  audio/speakers/speaker_1/sample1.wav")
+            print("  audio/speakers/speaker_1/sample2.wav")
+            print("  audio/speakers/speaker_2/sample1.wav")
+            return speakers_embeddings
+            
+        print(f"Tìm thấy {len(speaker_dirs)} người nói")
+        
+        for speaker_dir in speaker_dirs:
+            speaker_name = speaker_dir.name
+            embeddings = self.process_speaker_directory(speaker_dir)
+            
+            if embeddings:
+                speakers_embeddings[speaker_name] = embeddings
+                print(f"Đã tạo {len(embeddings)} embeddings cho {speaker_name}")
+                
+        return speakers_embeddings
+
+# Hàm độc lập để lưu và tải embeddings
+def save_embeddings(embeddings_dict, output_path):
+    """
+    Lưu embeddings vào file numpy
     
-def load_embeddings(input_file):
-    """Tải embeddings từ file numpy"""
-    data = np.load(input_file)
-    embeddings = {name: data[name] for name in data.files}
-    return embeddings
+    Args:
+        embeddings_dict: Dictionary ánh xạ từ tên người nói đến list embeddings
+        output_path: Đường dẫn đến file output
+    """
+    # Tạo thư mục nếu chưa tồn tại
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
-# Test function
+    # Chuyển đổi list embeddings thành numpy array cho mỗi người nói
+    np_embeddings = {
+        name: np.array(embeddings) 
+        for name, embeddings in embeddings_dict.items()
+    }
+    
+    # Lưu vào file
+    np.savez(output_path, **np_embeddings)
+    print(f"Đã lưu embeddings vào {output_path}")
+
+def load_embeddings(file_path):
+    """
+    Tải embeddings từ file numpy
+    
+    Args:
+        file_path: Đường dẫn đến file embeddings
+        
+    Returns:
+        Dictionary ánh xạ từ tên người nói đến list embeddings
+    """
+    data = np.load(file_path)
+    return {name: list(data[name]) for name in data.files}
+
 if __name__ == "__main__":
-    # Khởi tạo speaker embedder
+    # Khởi tạo embedder
     embedder = SpeakerEmbedder()
     
-    # Nhúng tất cả file âm thanh trong thư mục audio
-    embeddings = embedder.embed_directory("audio")
+    # Xử lý tất cả các người nói
+    speakers_dir = "audio/speakers"
+    embeddings = embedder.process_all_speakers(speakers_dir)
     
     if embeddings:
-        print(f"Đã trích xuất {len(embeddings)} embeddings")
-        
         # Lưu embeddings
         save_embeddings(embeddings, "speaker_embeddings.npz")
+        
+        # In thống kê
+        total_embeddings = sum(len(emb_list) for emb_list in embeddings.values())
+        print(f"\nTổng kết:")
+        print(f"- Số người nói: {len(embeddings)}")
+        print(f"- Tổng số embeddings: {total_embeddings}")
+        print(f"- Trung bình embeddings/người: {total_embeddings/len(embeddings):.1f}")
     else:
-        print("Không tìm thấy file âm thanh nào để trích xuất embedding") 
+        print("Không tạo được embeddings nào") 

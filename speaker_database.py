@@ -12,14 +12,16 @@ class SpeakerDatabase:
     """
     Cơ sở dữ liệu lưu trữ và tìm kiếm các embedding của người nói
     sử dụng thư viện Faiss để tìm kiếm hiệu quả
+    Hỗ trợ nhiều embeddings cho mỗi người nói
     """
     
     def __init__(self):
         """Khởi tạo cơ sở dữ liệu trống"""
-        self.embeddings = {}  # Dictionary lưu trữ embeddings theo tên
+        self.embeddings = {}  # Dictionary lưu trữ list embeddings theo tên
         self.names = []       # Danh sách tên người nói theo thứ tự trong index
         self.dimension = 0    # Chiều của embedding vectors
         self.index = None     # Faiss index
+        self.embedding_to_name = []  # Map từ index trong Faiss đến tên người nói
         
     def add_embedding(self, name, embedding):
         """
@@ -32,11 +34,13 @@ class SpeakerDatabase:
         # Chuẩn hóa embedding để sử dụng với Inner Product (cosine similarity)
         normalized_embedding = embedding / np.linalg.norm(embedding)
         
-        # Lưu embedding vào dictionary
-        self.embeddings[name] = normalized_embedding
-        
-        # Cập nhật danh sách tên
-        self.names.append(name)
+        # Khởi tạo list embeddings cho người nói mới nếu chưa có
+        if name not in self.embeddings:
+            self.embeddings[name] = []
+            self.names.append(name)
+            
+        # Lưu embedding vào list của người nói
+        self.embeddings[name].append(normalized_embedding)
         
         # Cập nhật chiều nếu chưa có
         if self.dimension == 0:
@@ -50,10 +54,14 @@ class SpeakerDatabase:
         Thêm nhiều embeddings vào cơ sở dữ liệu
         
         Args:
-            embeddings_dict: Dictionary ánh xạ từ tên đến embedding
+            embeddings_dict: Dictionary ánh xạ từ tên đến list embeddings
         """
-        for name, embedding in embeddings_dict.items():
-            self.add_embedding(name, embedding)
+        for name, embeddings in embeddings_dict.items():
+            if isinstance(embeddings, list):
+                for embedding in embeddings:
+                    self.add_embedding(name, embedding)
+            else:
+                self.add_embedding(name, embeddings)
             
     def build_index(self):
         """Xây dựng Faiss index từ các embeddings đã thêm vào"""
@@ -61,17 +69,24 @@ class SpeakerDatabase:
             print("Không có embeddings nào để xây dựng index")
             return False
             
-        # Chuyển embeddings thành ma trận numpy
-        embeddings_matrix = np.vstack(list(self.embeddings.values()))
+        # Tạo list phẳng của tất cả embeddings và map tương ứng
+        all_embeddings = []
+        self.embedding_to_name = []
+        
+        for name, embeddings in self.embeddings.items():
+            all_embeddings.extend(embeddings)
+            self.embedding_to_name.extend([name] * len(embeddings))
+            
+        # Chuyển thành ma trận numpy
+        embeddings_matrix = np.vstack(all_embeddings)
         
         # Tạo Faiss index (Inner Product cho cosine similarity)
-        # Sử dụng IndexFlatIP thay vì IndexFlatL2 để sử dụng cosine similarity
         self.index = faiss.IndexFlatIP(self.dimension)
         
         # Thêm vectors vào index
         self.index.add(embeddings_matrix.astype(np.float32))
         
-        print(f"Đã xây dựng Faiss index với {len(self.embeddings)} vectors")
+        print(f"Đã xây dựng Faiss index với {len(all_embeddings)} vectors từ {len(self.embeddings)} người nói")
         return True
         
     def search(self, query_embedding, top_k=1):
@@ -98,11 +113,10 @@ class SpeakerDatabase:
         query_embedding_norm = query_embedding / np.linalg.norm(query_embedding)
             
         # Tìm kiếm kNN trên Faiss index
-        # Inner Product của 2 vector chuẩn hóa = cosine similarity
-        similarities, indices = self.index.search(query_embedding_norm.astype(np.float32), k=min(top_k, len(self.names)))
+        similarities, indices = self.index.search(query_embedding_norm.astype(np.float32), k=min(top_k, len(self.embedding_to_name)))
         
         # Ánh xạ indices sang tên người nói
-        result_names = [self.names[i] for i in indices[0]]
+        result_names = [self.embedding_to_name[i] for i in indices[0]]
         
         return result_names, similarities[0]
         
@@ -128,22 +142,35 @@ class SpeakerDatabase:
                        (cosine similarity, 0.6 là ngưỡng hợp lý để bắt đầu)
                        
         Returns:
-            Tuple (tên người nói gần nhất, độ tương đồng, is_known_speaker)
+            Tuple (tên người nói gần nhất, độ tương đồng trung bình, is_known_speaker)
         """
-        names, similarities = self.search(query_embedding, top_k=1)
+        # Tìm top 5 kết quả gần nhất
+        names, similarities = self.search(query_embedding, top_k=5)
         
         if not names:
             return None, 0.0, False
             
-        name = names[0]
-        # Do similarities từ IndexFlatIP đã là inner product của các vector đơn vị,
-        # nên nó tương đương với cosine similarity
-        cosine_sim = similarities[0]
-        
-        # Kiểm tra ngưỡng nếu có
-        is_known_speaker = cosine_sim >= threshold
+        # Tính độ tương đồng trung bình cho mỗi người nói
+        speaker_similarities = {}
+        for name, sim in zip(names, similarities):
+            if name not in speaker_similarities:
+                speaker_similarities[name] = []
+            speaker_similarities[name].append(sim)
             
-        return name, cosine_sim, is_known_speaker
+        # Tìm người nói có độ tương đồng trung bình cao nhất
+        best_speaker = None
+        best_avg_sim = 0.0
+        
+        for name, sims in speaker_similarities.items():
+            avg_sim = sum(sims) / len(sims)
+            if avg_sim > best_avg_sim:
+                best_speaker = name
+                best_avg_sim = avg_sim
+        
+        # Kiểm tra ngưỡng
+        is_known_speaker = best_avg_sim >= threshold
+            
+        return best_speaker, best_avg_sim, is_known_speaker
         
     def save(self, directory):
         """
@@ -157,12 +184,13 @@ class SpeakerDatabase:
         
         # Lưu embeddings thành file numpy
         embeddings_path = os.path.join(directory, "embeddings.npz")
-        np.savez(embeddings_path, **self.embeddings)
+        np.savez(embeddings_path, **{name: np.array(embeddings) for name, embeddings in self.embeddings.items()})
         
-        # Lưu metadata (danh sách tên, chiều)
+        # Lưu metadata
         metadata = {
             "names": self.names,
-            "dimension": self.dimension
+            "dimension": self.dimension,
+            "embedding_to_name": self.embedding_to_name
         }
         metadata_path = os.path.join(directory, "metadata.json")
         with open(metadata_path, 'w', encoding='utf-8') as f:
@@ -201,13 +229,14 @@ class SpeakerDatabase:
             
         # Tải embeddings
         embeddings_data = np.load(embeddings_path)
-        db.embeddings = {name: embeddings_data[name] for name in embeddings_data.files}
+        db.embeddings = {name: list(embeddings_data[name]) for name in embeddings_data.files}
         
         # Tải metadata
         with open(metadata_path, 'r', encoding='utf-8') as f:
             metadata = json.load(f)
             db.names = metadata["names"]
             db.dimension = metadata["dimension"]
+            db.embedding_to_name = metadata.get("embedding_to_name", [])
             
         # Tải Faiss index nếu có
         if os.path.exists(index_path):
@@ -216,7 +245,7 @@ class SpeakerDatabase:
             # Xây dựng lại index nếu không tìm thấy file
             db.build_index()
             
-        print(f"Đã tải cơ sở dữ liệu từ {directory} với {len(db.embeddings)} embeddings")
+        print(f"Đã tải cơ sở dữ liệu từ {directory} với {sum(len(embeddings) for embeddings in db.embeddings.values())} embeddings từ {len(db.embeddings)} người nói")
         return db
         
 # Test function

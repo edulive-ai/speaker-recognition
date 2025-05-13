@@ -55,7 +55,7 @@ class SpeakerRecognitionApp:
             self.initialize()
             
         # Trích xuất embeddings
-        embeddings = self.embedder.embed_directory(audio_dir)
+        embeddings = self.embedder.process_all_speakers(audio_dir)
         
         if not embeddings:
             print(f"Không tìm thấy file âm thanh nào trong thư mục {audio_dir}")
@@ -101,7 +101,7 @@ class SpeakerRecognitionApp:
         print(f"Đang nhận dạng người nói từ file {audio_file}...")
         
         # Trích xuất embedding
-        embedding = self.embedder.embed_file(audio_file)
+        embedding = self.embedder.process_audio(audio_file)
         
         if embedding is None:
             print(f"Không thể trích xuất embedding từ file {audio_file}")
@@ -142,7 +142,7 @@ class SpeakerRecognitionApp:
         # Trích xuất embeddings
         all_embeddings = []
         for audio_file in audio_files:
-            embedding = self.embedder.embed_file(audio_file)
+            embedding = self.embedder.process_audio(audio_file)
             if embedding is not None:
                 all_embeddings.append(embedding)
                 
@@ -150,11 +150,9 @@ class SpeakerRecognitionApp:
             print("Không thể trích xuất embedding từ bất kỳ file âm thanh nào")
             return False
             
-        # Tính trung bình các embeddings
-        avg_embedding = np.mean(all_embeddings, axis=0)
-        
-        # Thêm vào cơ sở dữ liệu
-        self.database.add_embedding(speaker_name, avg_embedding)
+        # Thêm tất cả embeddings vào cơ sở dữ liệu
+        for embedding in all_embeddings:
+            self.database.add_embedding(speaker_name, embedding)
         
         # Xây dựng lại index
         self.database.build_index()
@@ -162,7 +160,7 @@ class SpeakerRecognitionApp:
         # Lưu cơ sở dữ liệu
         self.database.save(self.database_dir)
         
-        print(f"Đã thêm người nói {speaker_name} vào cơ sở dữ liệu")
+        print(f"Đã thêm người nói {speaker_name} vào cơ sở dữ liệu với {len(all_embeddings)} embeddings")
         return True
         
     def list_speakers(self):
@@ -186,7 +184,7 @@ def main():
     
     # Subcommand "prepare"
     prepare_parser = subparsers.add_parser("prepare", help="Chuẩn bị cơ sở dữ liệu")
-    prepare_parser.add_argument("--dir", default="audio", help="Thư mục chứa file âm thanh")
+    prepare_parser.add_argument("--dir", default="audio/speakers", help="Thư mục chứa file âm thanh")
     
     # Subcommand "identify"
     identify_parser = subparsers.add_parser("identify", help="Nhận dạng người nói")
@@ -250,22 +248,19 @@ def main():
             return
             
         # Trích xuất embeddings
-        embedding1 = app.embedder.embed_file(args.file1)
-        embedding2 = app.embedder.embed_file(args.file2)
+        embedding1 = app.embedder.process_audio(args.file1)
+        embedding2 = app.embedder.process_audio(args.file2)
         
         if embedding1 is None or embedding2 is None:
-            print("Không thể trích xuất embedding từ một trong các file")
+            print("Không thể trích xuất embedding từ một hoặc cả hai file")
             return
             
-        # Tính độ tương đồng cosine
+        # Tính độ tương đồng
         similarity = app.database.calculate_cosine_similarity(embedding1, embedding2)
-        is_same, _ = similarity >= app.threshold, similarity
+        print(f"Độ tương đồng giữa hai file: {similarity:.4f}")
         
-        print(f"Độ tương đồng cosine: {similarity:.4f}")
-        print(f"Kết luận: {'Cùng người nói' if is_same else 'Khác người nói'}")
-            
     else:
         parser.print_help()
-        
+
 if __name__ == "__main__":
     main() 
