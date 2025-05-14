@@ -14,7 +14,29 @@ from speech_to_text import SpeechToText
 
 # Khởi tạo Flask app
 app = Flask(__name__, static_folder='static')
-CORS(app)  # Cho phép Cross-Origin Resource Sharing
+
+# Cấu hình CORS chi tiết hơn với các domain cụ thể
+CORS(app, resources={r"/*": {
+    "origins": ["http://localhost:5000", "https://ba12-14-232-211-211.ngrok-free.app", "https://*.ngrok-free.app", "https://*.ngrok.io", "*"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Access-Control-Allow-Origin", "*"],
+    "expose_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+    "supports_credentials": True
+}})
+
+# Middleware để đảm bảo CORS headers được áp dụng cho mỗi response
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin', '*')
+    if request.method == 'OPTIONS':
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    else:
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    return response
 
 # Cấu hình
 UPLOAD_FOLDER = 'uploads'

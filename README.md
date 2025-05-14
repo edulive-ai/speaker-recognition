@@ -12,6 +12,7 @@ Dự án này xây dựng một hệ thống nhận dạng người nói hoàn c
 - Chuyển đổi nhiều định dạng âm thanh sang định dạng wav
 - So sánh trực tiếp độ tương đồng giữa hai file âm thanh
 - Ghi âm trực tiếp từ microphone và lưu thành file WAV
+- Phân tích cuộc họp để xác định ai nói gì và khi nào (tự động phát hiện đoạn giọng nói)
 
 ## Cài đặt
 
@@ -160,4 +161,155 @@ Các file ghi âm sẽ được lưu ở định dạng WAV và có thể đư�
 - Đảm bảo các file âm thanh của bạn có chất lượng tốt và độ dài đủ (ít nhất 3-5 giây).
 - Ngưỡng độ tương đồng mặc định là 0.6, có thể điều chỉnh tùy theo nhu cầu và dữ liệu cụ thể. Giá trị cao hơn (gần 1.0) yêu cầu độ tương đồng cao hơn.
 - Tránh nhiễu và tiếng ồn nền trong file âm thanh để có kết quả chính xác nhất.
-- Model cần tải dữ liệu từ Hugging Face Hub, nên lần đầu tiên sử dụng sẽ yêu cầu kết nối internet. 
+- Model cần tải dữ liệu từ Hugging Face Hub, nên lần đầu tiên sử dụng sẽ yêu cầu kết nối internet.
+
+## Công cụ gộp file âm thanh (merge_audio_files.py)
+
+Đây là công cụ giúp gộp nhiều file âm thanh trong một thư mục thành một file duy nhất.
+
+### Cài đặt
+
+Đảm bảo bạn đã cài đặt thư viện pydub:
+
+```bash
+pip install pydub
+```
+
+Thư viện này cũng yêu cầu ffmpeg để xử lý các định dạng âm thanh. Nếu chưa cài đặt, bạn có thể cài đặt như sau:
+
+```bash
+# Trên Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# Trên macOS với Homebrew
+brew install ffmpeg
+```
+
+### Cách sử dụng cơ bản
+
+```bash
+python merge_audio_files.py đường_dẫn_thư_mục_chứa_file_âm_thanh đường_dẫn_file_đầu_ra
+```
+
+Ví dụ:
+```bash
+python merge_audio_files.py ./audio_files ./output.wav
+```
+
+### Các tùy chọn
+
+| Tùy chọn | Mô tả |
+|----------|-------|
+| `--formats` | Lọc theo định dạng file (ví dụ: wav, mp3) |
+| `--sort` | Sắp xếp theo `name` (tên file) hoặc `time` (thời gian tạo file) |
+| `--reverse` | Đảo ngược thứ tự sắp xếp |
+| `--silence` | Thêm khoảng lặng giữa các file (mili giây) |
+| `--normalize` | Chuẩn hóa âm thanh |
+| `--sample-rate` | Tần số lấy mẫu cho file đầu ra (Hz) |
+| `--channels` | Số kênh cho file đầu ra (1=mono, 2=stereo) |
+| `--wav` | Luôn xuất ra định dạng WAV bất kể đuôi file đầu ra |
+
+### Ví dụ nâng cao
+
+1. Gộp tất cả file WAV, thêm khoảng lặng 500ms giữa các file:
+```bash
+python merge_audio_files.py ./audio_files ./output.mp3 --formats wav --silence 500
+```
+
+2. Gộp file theo thời gian tạo, đảo ngược thứ tự và chuẩn hóa âm thanh:
+```bash
+python merge_audio_files.py ./audio_files ./output.wav --sort time --reverse --normalize
+```
+
+3. Gộp file và chuyển đổi sang âm thanh mono với tần số 44100Hz:
+```bash
+python merge_audio_files.py ./audio_files ./output.wav --channels 1 --sample-rate 44100
+```
+
+### Sử dụng trong mã Python
+
+Bạn có thể import và sử dụng hàm `merge_audio_files` trong mã Python:
+
+```python
+from merge_audio_files import merge_audio_files
+
+output_path = merge_audio_files(
+    input_dir="./audio_files",
+    output_file="./output.wav",
+    format_filter=["wav", "mp3"],
+    add_silence=500,
+    normalize=True,
+    channels=1
+)
+
+print(f"File đã được lưu tại: {output_path}")
+```
+
+## Phân đoạn người nói (diarization_speaker.py)
+
+Đây là công cụ giúp phân tích và nhận diện các đoạn người nói khác nhau trong một file âm thanh có nhiều người tham gia (như cuộc họp, phỏng vấn).
+
+### Cài đặt thêm
+
+Đảm bảo bạn đã cài đặt các thư viện cần thiết:
+
+```bash
+pip install pyannote.audio matplotlib pydub tqdm
+```
+
+Bạn cần có token Hugging Face và đã chấp nhận điều khoản sử dụng mô hình tại: https://huggingface.co/pyannote/speaker-diarization-3.1
+
+### Cách sử dụng cơ bản
+
+```bash
+python diarization_speaker.py đường_dẫn_đến_file_âm_thanh
+```
+
+Ví dụ:
+```bash
+python diarization_speaker.py meeting_voice/voice_meeting.wav
+```
+
+### Các tùy chọn
+
+| Tùy chọn | Mô tả |
+|----------|-------|
+| `--num_speakers` | Chỉ định số lượng người nói cố định (nếu biết trước) |
+| `--min_speakers` | Chỉ định số người nói tối thiểu |
+| `--max_speakers` | Chỉ định số người nói tối đa |
+| `--visualize` | Tạo biểu đồ trực quan kết quả phân đoạn |
+| `--extract` | Tạo các file âm thanh riêng biệt cho từng người nói |
+| `--output_dir` | Chỉ định thư mục đầu ra cho kết quả |
+| `--format` | Chọn định dạng file kết quả (json, rttm, txt, all) |
+
+### Ví dụ nâng cao
+
+1. Chỉ định số lượng người nói:
+```bash
+python diarization_speaker.py meeting_voice/voice_meeting.wav --num_speakers 3
+```
+
+2. Tạo biểu đồ trực quan và tách riêng âm thanh từng người:
+```bash
+python diarization_speaker.py meeting_voice/voice_meeting.wav --visualize --extract
+```
+
+3. Chỉ định khoảng người nói và định dạng đầu ra:
+```bash
+python diarization_speaker.py meeting_voice/voice_meeting.wav --min_speakers 2 --max_speakers 5 --format json
+```
+
+### Hiểu kết quả
+
+Kết quả phân đoạn sẽ hiển thị:
+- Thời gian bắt đầu và kết thúc của từng đoạn nói
+- Nhãn người nói (SPEAKER_00, SPEAKER_01, ...)
+- Thống kê tổng thời lượng nói của từng người
+- Các file output định dạng JSON, RTTM và TXT
+
+### Tích hợp với dự án
+
+Công cụ này có thể được sử dụng với hệ thống nhận dạng người nói để:
+1. Phân tách các đoạn nói trong cuộc họp
+2. Tạo dữ liệu cho từng người nói riêng biệt
+3. Kết hợp với nhận dạng người nói để gán tên thật thay cho SPEAKER_XX

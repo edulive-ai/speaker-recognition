@@ -15,3 +15,4 @@ flask
 flask-cors
 werkzeug
 SpeechRecognition
+webrtcvad
