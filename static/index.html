@@ -211,12 +211,14 @@
                 <h2>Thông tin hệ thống</h2>
                 <div class="card">
                     <h3>Giới thiệu</h3>
-                    <p>Hệ thống nhận dạng người nói được xây dựng dựa trên mô hình ECAPA-TDNN từ SpeechBrain, 
-                    kết hợp với thư viện Faiss của Facebook để lưu trữ và tìm kiếm hiệu quả. Hệ thống tích hợp thêm
-                    khả năng chuyển đổi âm thanh thành văn bản sử dụng Google Speech Recognition API.</p>
+                    <p>
+                        Hệ thống nhận dạng người nói được xây dựng dựa trên mô hình ECAPA-TDNN từ SpeechBrain, 
+                        kết hợp với thư viện Faiss của Facebook để lưu trữ và tìm kiếm hiệu quả. Hệ thống tích hợp thêm
+                        khả năng chuyển đổi âm thanh thành văn bản sử dụng Google Speech Recognition API.
+                    </p>
                     
                     <h3>Các tính năng</h3>
-                    <ul>
+                    <ul class="feature-list">
                         <li>Nhận dạng người nói từ file âm thanh</li>
                         <li>Thêm người nói mới vào hệ thống</li>
                         <li>Quản lý danh sách người nói</li>
@@ -228,21 +230,21 @@
                     </ul>
                     
                     <h3>Công nghệ sử dụng</h3>
-                    <ul>
-                        <li>SpeechBrain: Mô hình ECAPA-TDNN để trích xuất đặc trưng giọng nói</li>
-                        <li>Faiss: Lưu trữ và tìm kiếm vector đặc trưng hiệu quả</li>
-                        <li>Google Speech Recognition: Chuyển đổi âm thanh thành văn bản</li>
-                        <li>PyAudio: Ghi âm từ microphone</li>
-                        <li>Flask: Xây dựng API backend</li>
-                        <li>HTML/CSS/JavaScript: Giao diện người dùng</li>
+                    <ul class="tech-list">
+                        <li><strong>SpeechBrain:</strong> Mô hình ECAPA-TDNN để trích xuất đặc trưng giọng nói</li>
+                        <li><strong>Faiss:</strong> Lưu trữ và tìm kiếm vector đặc trưng hiệu quả</li>
+                        <li><strong>Google Speech Recognition:</strong> Chuyển đổi âm thanh thành văn bản</li>
+                        <li><strong>PyAudio:</strong> Ghi âm từ microphone</li>
+                        <li><strong>Flask:</strong> Xây dựng API backend</li>
+                        <li><strong>HTML/CSS/JavaScript:</strong> Giao diện người dùng</li>
                     </ul>
                     
                     <h3>Các định dạng hỗ trợ</h3>
-                    <p>Hệ thống hỗ trợ các định dạng âm thanh: WAV, MP3, OGG, FLAC, M4A</p>
+                    <p>Hệ thống hỗ trợ các định dạng âm thanh: <span class="format-badge">WAV</span> <span class="format-badge">MP3</span> <span class="format-badge">OGG</span> <span class="format-badge">FLAC</span> <span class="format-badge">M4A</span></p>
                     
                     <h3>Lưu ý</h3>
                     <p>Để có kết quả nhận dạng tốt nhất:</p>
-                    <ul>
+                    <ul class="notes-list">
                         <li>Sử dụng các file âm thanh có chất lượng cao, ít nhiễu</li>
                         <li>Mẫu âm thanh nên có độ dài ít nhất 3-5 giây</li>
                         <li>Khi ghi âm, nên ở môi trường yên tĩnh và nói rõ ràng</li>

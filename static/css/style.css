@@ -466,4 +466,46 @@ input[type="checkbox"] {
     #speaker-options .form-group {
         margin-bottom: 15px;
     }
+}
+
+/* About page styles */
+.feature-list li, .tech-list li, .notes-list li {
+    margin-bottom: 10px;
+    padding-left: 5px;
+    position: relative;
+}
+
+.feature-list li::before {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: var(--success-color);
+    margin-right: 8px;
+}
+
+.tech-list li {
+    padding-left: 0;
+}
+
+.tech-list li strong {
+    color: var(--primary-color);
+}
+
+.format-badge {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 0 3px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.notes-list li::before {
+    content: "\f0a4";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: var(--warning-color);
+    margin-right: 8px;
 } 
