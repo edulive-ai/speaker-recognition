@@ -144,6 +144,9 @@ class SpeakerDatabase:
         Returns:
             Tuple (tên người nói gần nhất, độ tương đồng trung bình, is_known_speaker)
         """
+        # Chuẩn hóa query embedding
+        query_embedding = query_embedding / np.linalg.norm(query_embedding)
+        
         # Tìm top 5 kết quả gần nhất
         names, similarities = self.search(query_embedding, top_k=5)
         

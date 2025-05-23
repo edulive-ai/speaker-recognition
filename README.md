@@ -313,3 +313,142 @@ Công cụ này có thể được sử dụng với hệ thống nhận dạng 
 1. Phân tách các đoạn nói trong cuộc họp
 2. Tạo dữ liệu cho từng người nói riêng biệt
 3. Kết hợp với nhận dạng người nói để gán tên thật thay cho SPEAKER_XX
+
+# Speaker Recognition API Documentation
+
+This document provides detailed information about the available API endpoints and how to use them with curl commands.
+
+## Base URL
+
+All API endpoints are relative to the base URL: `http://localhost:5000`
+
+## API Endpoints
+
+### Health Check
+
+Check if the API is running properly.
+
+```bash
+curl -X GET http://localhost:5000/health
+```
+
+### Speaker Management
+
+#### Get All Speakers
+
+Retrieve a list of all registered speakers.
+
+```bash
+curl -X GET http://localhost:5000/speakers
+```
+
+#### Create New Speaker
+
+Add a new speaker with audio files.
+
+```bash
+curl -X POST http://localhost:5000/speakers \
+  -F "speaker_name=John Doe" \
+  -F "files[]=@/path/to/audio1.wav" \
+  -F "files[]=@/path/to/audio2.wav"
+```
+
+#### Delete Speaker
+
+Remove a speaker from the database.
+
+```bash
+curl -X DELETE http://localhost:5000/speakers/John%20Doe
+```
+
+### Speaker Identification
+
+#### Identify Speaker from Audio File
+
+Identify a speaker from an audio file.
+
+```bash
+curl -X POST http://localhost:5000/speakers/identify \
+  -F "file=@/path/to/audio.wav" \
+  -F "threshold=0.6"
+```
+
+### Similarity Check
+
+#### Check Similarity Between Two Audio Files
+
+Compare two audio files and get their similarity score.
+
+```bash
+curl -X POST http://localhost:5000/similarity \
+  -F "file1=@/path/to/audio1.wav" \
+  -F "file2=@/path/to/audio2.wav"
+```
+
+### Speech to Text
+
+#### Convert Audio File to Text
+
+Convert speech in an audio file to text.
+
+```bash
+curl -X POST http://localhost:5000/speech-to-text/files \
+  -F "file=@/path/to/audio.wav" \
+  -F "language=vi-VN"
+```
+
+#### Record and Convert to Text
+
+Record audio and convert it to text in real-time.
+
+```bash
+curl -X POST http://localhost:5000/speech-to-text/recordings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "duration": 5,
+    "language": "vi-VN",
+    "extract_embedding": true,
+    "speaker_name": "John Doe",
+    "identify_speaker": true,
+    "threshold": 0.6
+  }'
+```
+
+## Response Format
+
+All API responses follow this format:
+
+```json
+{
+  "status": "success|error",
+  "data": {
+    // Response data (if any)
+  },
+  "message": "Human readable message"
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 404: Not Found
+- 405: Method Not Allowed
+- 413: Request Entity Too Large
+- 422: Unprocessable Entity
+- 500: Internal Server Error
+
+## File Requirements
+
+- Supported audio formats: WAV, MP3, OGG, FLAC, M4A
+- Maximum file size: 16MB
+
+## CORS Support
+
+The API supports CORS and is configured to work with:
+- http://localhost:5000
+- https://*.ngrok-free.app
+- https://*.ngrok.io

@@ -38,13 +38,35 @@ class SpeechToText:
             with sr.AudioFile(audio_file) as source:
                 audio_data = self.recognizer.record(source)
                 text = self.recognizer.recognize_google(audio_data, language=self.language)
-                return text, True
+                return {
+                    "success": True,
+                    "message": "Nhận dạng văn bản thành công",
+                    "data": {
+                        "transcription": {
+                            "text": text,
+                            "language": self.language,
+                            "confidence": "high"
+                        }
+                    }
+                }
         except sr.UnknownValueError:
-            return "Không thể nhận dạng văn bản từ âm thanh", False
+            return {
+                "success": False,
+                "message": "Không thể nhận dạng văn bản từ âm thanh",
+                "data": None
+            }
         except sr.RequestError as e:
-            return f"Lỗi kết nối đến Google API: {e}", False
+            return {
+                "success": False,
+                "message": f"Lỗi kết nối đến Google API: {e}",
+                "data": None
+            }
         except Exception as e:
-            return f"Lỗi: {e}", False
+            return {
+                "success": False,
+                "message": f"Lỗi: {e}",
+                "data": None
+            }
             
     def record_and_recognize(self, record_seconds=5, sample_rate=16000):
         """
@@ -55,7 +77,7 @@ class SpeechToText:
             sample_rate: Tần số lấy mẫu
             
         Returns:
-            Tuple (văn bản nhận dạng, trạng thái thành công, đường dẫn file tạm)
+            Tuple (kết quả nhận dạng, đường dẫn file tạm)
         """
         # Tạo file tạm
         temp_file = tempfile.mktemp(suffix=".wav")
@@ -64,9 +86,9 @@ class SpeechToText:
         self._record_audio(temp_file, record_seconds, sample_rate)
         
         # Nhận dạng văn bản
-        text, success = self.recognize_from_file(temp_file)
+        result = self.recognize_from_file(temp_file)
         
-        return text, success, temp_file
+        return result, temp_file
     
     def _record_audio(self, output_file, record_seconds=5, sample_rate=16000, chunk=1024, channels=1):
         """
@@ -144,12 +166,12 @@ if __name__ == "__main__":
     stt = SpeechToText(language="vi-VN")
     
     # Ghi âm và nhận dạng
-    text, success, temp_file = stt.record_and_recognize(record_seconds=5)
+    result, temp_file = stt.record_and_recognize(record_seconds=5)
     
-    if success:
-        print(f"Kết quả nhận dạng: {text}")
+    if result["success"]:
+        print(f"Kết quả nhận dạng: {result['data']['transcription']['text']}")
     else:
-        print(f"Lỗi: {text}")
+        print(f"Lỗi: {result['message']}")
         
     # Xóa file tạm
     try:
